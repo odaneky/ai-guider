@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": "python3 ./hooks/ai-guider-session.sh",
+        "timeout": 20
+      }
+    ],
+    "preToolUse": [
+      {
+        "command": "python3 ./hooks/ai-guider-pretool.sh",
+        "matcher": "Write|StrReplace|Delete|EditNotebook",
+        "timeout": 10
+      }
+    ]
+  }
+}
