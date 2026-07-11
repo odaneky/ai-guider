@@ -8,5 +8,6 @@ Plain-language guides for installing and using AI Guider with Cursor, Claude, an
 | [Usage](usage.md) | Run missions, answer questions, plan, act, complete |
 | [Clients](clients.md) | Wire Cursor, Claude Code, Claude Desktop, or Codex |
 | [Cursor integration](cursor-integration.md) | Use hooks, maps, and Cursor-only guardrails |
+| [Publishing](publishing.md) | Ship releases to PyPI via GitHub Actions |
 
 Project overview: [README](../README.md).

@@ -4,6 +4,8 @@
 
 - Documentation rewrite: plain-language installation, usage, and multi-client guides
 - New docs/installation.md and docs/README.md index
+- GitHub Actions workflow to publish to PyPI on release (`.github/workflows/publish.yml`)
+- Package version aligned to 0.2.4
 
 ## 0.2.3
 

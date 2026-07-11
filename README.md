@@ -118,6 +118,7 @@ Browse all guides: **[docs/](docs/README.md)**
 | [Usage](docs/usage.md) | Day-to-day workflow in plain language |
 | [Clients (Cursor, Claude, Codex)](docs/clients.md) | Per-app connection steps |
 | [Cursor deep dive](docs/cursor-integration.md) | Hooks, maps, Cursor-only features |
+| [Publishing to PyPI](docs/publishing.md) | GitHub Release → PyPI workflow |
 
 ---
 
