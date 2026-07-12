@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.5
+
+- Comprehensive CLI help: `ai-guider help` lists every command and what it does
+- `ai-guider help <command>` shows detailed flags; `-h` works alongside `--help`
+
 ## 0.2.4
 
 - Documentation rewrite: plain-language installation, usage, and multi-client guides

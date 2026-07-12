@@ -97,6 +97,7 @@ Step-by-step with examples: **[Usage guide](docs/usage.md)**
 ## Useful commands
 
 ```bash
+ai-guider help            # Full command guide (what each command does)
 ai-guider doctor          # Is my install healthy?
 ai-guider bootstrap       # Show active mission + tips for this session
 ai-guider map             # Print a map of the current project

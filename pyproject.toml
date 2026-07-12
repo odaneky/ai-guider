@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ai-guider"
-version = "0.2.4"
+version = "0.2.5"
 description = "Local-first MCP server for AI agent guidance and mission governance"
 readme = "README.md"
 license = "MIT"

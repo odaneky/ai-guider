@@ -17,11 +17,84 @@ from guider.service import GuiderService
 from guider.storage.database import get_database
 from guider.watch import watch_events
 
+COMMAND_GUIDE = """
+[bold]AI Guider — command guide[/bold]
+
+Local MCP governance for AI coding agents. Guider does not write your code;
+it helps agents clarify scope, ask you questions, and finish cleanly.
+
+[bold cyan]Getting started[/bold cyan]
+  ai-guider help                 Show this full guide
+  ai-guider --help               Short command list
+  ai-guider <command> --help     Flags and options for one command
+  ai-guider doctor               Check that install + clients look healthy
+  ai-guider init --all-clients   Wire Cursor, Claude Code, Desktop, and Codex
+
+[bold cyan]Setup & clients[/bold cyan]
+  [green]init[/green]         Create config/DB and connect AI clients (MCP)
+                --all-clients       Cursor+hooks, Claude Code, Desktop, Codex
+                --cursor --hooks    Cursor IDE + session/edit guardrails
+                --claude            Claude Code (~/.claude.json)
+                --claude-desktop    Claude Desktop app
+                --codex             OpenAI Codex (~/.codex/config.toml)
+                --project-mcp DIR   Write project .mcp.json (Claude Code)
+                --config PATH       Alternate config file
+  [green]doctor[/green]       Health checks (Python, config, MCP wiring, hooks)
+  [green]config[/green]       Print current configuration as JSON
+  [green]status[/green]       Runtime stats (missions, events, pending questions)
+
+[bold cyan]Missions (day to day)[/bold cyan]
+  [green]resume[/green]       Active mission, pending questions, recent events
+                -w / --workspace    Force workspace path
+  [green]missions[/green]     List stored missions
+                -n / --limit N      How many to show (default 20)
+  [green]templates[/green]    List mission templates (personal-site, API, …)
+  [green]report[/green]       Governance compliance summary (JSON)
+                -m / --mission ID   Limit to one mission
+  [green]export[/green]       Write .ai-guider/mission.yaml + AGENTS.md into a project
+                ai-guider export <mission_id> <project_dir>
+  [green]watch[/green]        Stream mission events in the terminal
+                -m / --mission ID   -i / --interval SECONDS
+  [green]dashboard[/green]    Local web UI for missions
+                -p / --port PORT    Default 8765
+
+[bold cyan]Codebase & Cursor[/bold cyan]
+  [green]map[/green]          Local codebase map (tree, entrypoints, symbols)
+                -w / --workspace    Project root (default: cwd)
+                -d / --depth N      Max directory depth (default 4)
+                --json              Raw JSON output
+                --refresh           Bypass cache
+  [green]bootstrap[/green]    Session briefing (mission + map + act grant)
+                -w / --workspace
+                --no-write-rule     Do not update ~/.cursor/rules/ai-guider-session.mdc
+  [green]hook[/green]         Cursor hook adapter (used by hooks/*.sh — not for daily use)
+                ai-guider hook sessionStart | preToolUse
+
+[bold cyan]MCP server[/bold cyan]
+  ai-guider                      (no subcommand) Start the MCP server for Cursor/Claude/Codex
+
+[bold cyan]Typical first-time flow[/bold cyan]
+  1. pip install ai-guider   (or editable install from a git clone)
+  2. ai-guider init --all-clients
+  3. Restart / reload your AI client
+  4. ai-guider doctor
+  5. In the agent chat: ask it to use AI Guider (govern_request, …)
+
+[dim]Docs: https://github.com/odaneky/ai-guider — see docs/installation.md and docs/usage.md[/dim]
+""".strip()
+
 app = typer.Typer(
     name="ai-guider",
-    help="AI Guider — local-first MCP server for AI agent governance",
+    help=(
+        "AI Guider — local-first MCP governance for AI coding agents.\n\n"
+        "Run [bold]ai-guider help[/bold] for a full command guide, "
+        "or [bold]ai-guider <command> --help[/bold] for flags."
+    ),
     no_args_is_help=False,
     invoke_without_command=True,
+    rich_markup_mode="rich",
+    context_settings={"help_option_names": ["-h", "--help"]},
+    epilog="Examples:  ai-guider help  ·  ai-guider init --all-clients  ·  ai-guider doctor",
 )
 console = Console()
 
@@ -31,6 +104,30 @@ def main(ctx: typer.Context) -> None:
     """Run MCP server when no subcommand is provided."""
     if ctx.invoked_subcommand is None:
         run_server()
+
+
+@app.command("help")
+def help_command(
+    command: Optional[str] = typer.Argument(
+        None,
+        help="Optional command name to show detailed flag help (e.g. init, map)",
+    ),
+) -> None:
+    """Show a comprehensive guide to all commands (or detailed help for one command)."""
+    if command:
+        from typer.main import get_command
+
+        click_cmd = get_command(app)
+        sub = click_cmd.commands.get(command)
+        if sub is None:
+            console.print(f"[red]Unknown command:[/red] {command}")
+            console.print("Run [cyan]ai-guider help[/cyan] for the full list.")
+            raise typer.Exit(1)
+        ctx = typer.Context(sub, info_name=command, parent=typer.Context(click_cmd))
+        console.print(sub.get_help(ctx))
+        return
+
+    console.print(COMMAND_GUIDE)
 
 
 @app.command()
@@ -54,7 +151,9 @@ def init(
         False, "--codex", help="Configure OpenAI Codex CLI (~/.codex/config.toml)"
     ),
     all_clients: bool = typer.Option(
-        False, "--all-clients", help="Configure Cursor+hooks, Claude Code, Claude Desktop, Codex"
+        False,
+        "--all-clients",
+        help="Configure Cursor+hooks, Claude Code, Claude Desktop, and Codex in one step",
     ),
     project_mcp: Optional[Path] = typer.Option(
         None,
@@ -62,7 +161,18 @@ def init(
         help="Also write .mcp.json into this project directory (Claude Code project scope)",
     ),
 ) -> None:
-    """Initialize AI Guider configuration and optionally wire MCP clients."""
+    """Create local config/database and optionally wire MCP clients.
+
+    Examples:
+
+        ai-guider init --all-clients
+
+        ai-guider init --cursor --hooks
+
+        ai-guider init --claude --codex
+
+        ai-guider init --project-mcp .
+    """
     from guider.client_setup import setup_clients
 
     path = init_config(config_path)
@@ -127,7 +237,7 @@ def init(
 
 @app.command()
 def status() -> None:
-    """Show AI Guider runtime status."""
+    """Show runtime status (profile, DB path, mission counts)."""
     config = get_config()
     db = get_database()
     stats = db.get_stats()
@@ -154,7 +264,7 @@ def resume(
         None, "--workspace", "-w", help="Workspace path"
     ),
 ) -> None:
-    """Show active mission, pending questions, and recent events."""
+    """Show the active mission, pending questions, and recent events."""
     svc = GuiderService()
     data = svc.resume_mission(str(workspace) if workspace else None)
     if not data.get("mission_id"):
@@ -184,7 +294,7 @@ def resume(
 
 @app.command()
 def doctor() -> None:
-    """Run health checks on AI Guider installation."""
+    """Run health checks on config, Python, MCP clients, and Cursor hooks."""
     ok, results = run_doctor()
     table = Table(title="AI Guider Doctor")
     table.add_column("Check")
@@ -202,7 +312,7 @@ def doctor() -> None:
 def report(
     mission_id: Optional[str] = typer.Option(None, "--mission", "-m"),
 ) -> None:
-    """Show governance compliance report."""
+    """Show a governance compliance report as JSON."""
     data = governance_report(get_database(), mission_id)
     console.print_json(data=data)
 
@@ -212,7 +322,7 @@ def export(
     mission_id: str = typer.Argument(..., help="Mission ID"),
     project_path: Path = typer.Argument(..., help="Project directory"),
 ) -> None:
-    """Export mission to .ai-guider/mission.yaml and AGENTS.md."""
+    """Export a mission into the project as .ai-guider/mission.yaml and AGENTS.md."""
     svc = GuiderService()
     result = svc.export_mission(mission_id, str(project_path))
     console.print(f"[green]✓[/green] {result['mission_yaml']}")
@@ -224,7 +334,7 @@ def watch(
     mission_id: Optional[str] = typer.Option(None, "--mission", "-m"),
     interval: float = typer.Option(2.0, "--interval", "-i"),
 ) -> None:
-    """Watch mission events in real time."""
+    """Watch mission events in real time in the terminal."""
     watch_events(mission_id, interval)
 
 
@@ -232,7 +342,7 @@ def watch(
 def dashboard(
     port: int = typer.Option(8765, "--port", "-p"),
 ) -> None:
-    """Launch local web dashboard."""
+    """Launch the local web dashboard for missions."""
     run_dashboard(port)
 
 
@@ -245,7 +355,7 @@ def bootstrap(
         True, "--write-rule/--no-write-rule", help="Refresh ~/.cursor/rules/ai-guider-session.mdc"
     ),
 ) -> None:
-    """Print session bootstrap context (mission + map + act grant)."""
+    """Print session bootstrap context (active mission, map hints, act grant)."""
     from guider.hooks_runtime import build_bootstrap_context, write_session_rule
 
     data = build_bootstrap_context(str(workspace) if workspace else None)
@@ -259,7 +369,7 @@ def bootstrap(
 def hook_cmd(
     event: str = typer.Argument("preToolUse", help="sessionStart or preToolUse"),
 ) -> None:
-    """Cursor hook stdin/stdout adapter (used by hooks/*.sh)."""
+    """Cursor hook stdin/stdout adapter (used by hooks/*.sh; not for daily use)."""
     import sys
 
     sys.argv = ["ai-guider-hook", event]
@@ -277,7 +387,16 @@ def map_cmd(
     as_json: bool = typer.Option(False, "--json", help="Print raw JSON"),
     refresh: bool = typer.Option(False, "--refresh", help="Bypass cache"),
 ) -> None:
-    """Print a local codebase map (stdout only — does not write project files)."""
+    """Print a local codebase map (stdout only — does not write project files).
+
+    Examples:
+
+        ai-guider map
+
+        ai-guider map --workspace . --json
+
+        ai-guider map --refresh
+    """
     svc = GuiderService()
     data = svc.map_codebase(
         str(workspace) if workspace else None,
@@ -317,7 +436,7 @@ def map_cmd(
 
 @app.command()
 def templates() -> None:
-    """List available mission templates."""
+    """List available mission templates (personal-site, API, and more)."""
     from guider.mission.templates import list_templates
     table = Table(title="Mission Templates")
     table.add_column("ID", style="cyan")
@@ -332,7 +451,7 @@ def templates() -> None:
 def missions(
     limit: int = typer.Option(20, "--limit", "-n", help="Max missions to show"),
 ) -> None:
-    """List stored missions."""
+    """List stored missions (id, status, confidence, objective)."""
     db = get_database()
     items = db.list_missions(limit=limit)
 
@@ -361,7 +480,7 @@ def missions(
 def show_config(
     show: bool = typer.Option(True, "--show/--edit", help="Show current configuration"),
 ) -> None:
-    """Show current AI Guider configuration."""
+    """Show the current AI Guider configuration as JSON."""
     cfg = get_config()
     if show:
         console.print_json(data=cfg.to_dict())
