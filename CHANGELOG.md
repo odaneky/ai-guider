@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.0
+
+- First stable release
+- Local MCP governance for Cursor, Claude Code, Claude Desktop, and Codex
+- Missions, Q&A gates, plan refine, scope checks, codebase map, Cursor hooks
+- Comprehensive CLI help (`ai-guider help`) and plain-language docs
+- Published on PyPI as `ai-guider`
+
 ## 0.2.5
 
 - Comprehensive CLI help: `ai-guider help` lists every command and what it does
