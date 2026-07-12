@@ -8,6 +8,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from guider import __version__
 from guider.config.loader import get_config, get_config_path, init_config
 from guider.dashboard import run_dashboard
 from guider.doctor import run_doctor
@@ -24,6 +25,7 @@ Local MCP governance for AI coding agents. Guider does not write your code;
 it helps agents clarify scope, ask you questions, and finish cleanly.
 
 [bold cyan]Getting started[/bold cyan]
+  ai-guider --version            Show installed version
   ai-guider help                 Show this full guide
   ai-guider --help               Short command list
   ai-guider <command> --help     Flags and options for one command
@@ -94,13 +96,29 @@ app = typer.Typer(
     invoke_without_command=True,
     rich_markup_mode="rich",
     context_settings={"help_option_names": ["-h", "--help"]},
-    epilog="Examples:  ai-guider help  ·  ai-guider init --all-clients  ·  ai-guider doctor",
+    epilog="Examples:  ai-guider --version  ·  ai-guider help  ·  ai-guider init --all-clients",
 )
 console = Console()
 
 
+def _version_callback(value: bool) -> None:
+    if value:
+        console.print(f"ai-guider {__version__}")
+        raise typer.Exit()
+
+
 @app.callback(invoke_without_command=True)
-def main(ctx: typer.Context) -> None:
+def main(
+    ctx: typer.Context,
+    version: Optional[bool] = typer.Option(
+        None,
+        "--version",
+        "-V",
+        help="Show version and exit",
+        callback=_version_callback,
+        is_eager=True,
+    ),
+) -> None:
     """Run MCP server when no subcommand is provided."""
     if ctx.invoked_subcommand is None:
         run_server()

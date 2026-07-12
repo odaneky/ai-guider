@@ -7,6 +7,7 @@
 - Missions, Q&A gates, plan refine, scope checks, codebase map, Cursor hooks
 - Comprehensive CLI help (`ai-guider help`) and plain-language docs
 - Published on PyPI as `ai-guider`
+- `ai-guider --version` / `-V` prints the installed version
 
 ## 0.2.5
 

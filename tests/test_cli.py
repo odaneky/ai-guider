@@ -47,6 +47,15 @@ class TestCLI:
         assert result.exit_code == 1
         assert "Unknown command" in result.stdout
 
+    def test_version_flag(self, isolated_home) -> None:
+        from guider import __version__
+
+        for args in (["--version"], ["-V"]):
+            result = runner.invoke(app, args)
+            assert result.exit_code == 0, result.stdout
+            assert __version__ in result.stdout
+            assert "ai-guider" in result.stdout
+
     def test_short_help_flag(self, isolated_home) -> None:
         result = runner.invoke(app, ["-h"])
         assert result.exit_code == 0
